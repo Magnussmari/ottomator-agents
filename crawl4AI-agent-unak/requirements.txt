@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+beautifulsoup4
+requests
+python-dotenv
+supabase
+openai
+gpt3-tokenizer
+crawl4ai
