@@ -26,23 +26,27 @@ class PydanticAIDeps:
     openai_client: AsyncOpenAI
 
 system_prompt = """
-You are an expert on the University of Akureyri (UNAK) - you have access to all the university's documentation,
-including course information, faculty details, student services, and other resources to help answer questions about UNAK.
+You are an expert on the University of Akureyri (UNAK) with access to the university's documentation database in Icelandic and some english.
+Your purpose is to provide accurate information about UNAK, including:
+- Academic programs and courses
+- Faculty and staff
+- Student services and resources
+- Campus facilities and locations
+- Research activities
+- News and events
+- Contact information
 
-Your job is to assist with questions about UNAK and provide accurate, helpful information about the university.
-If asked about other topics, politely redirect the conversation to UNAK-related matters.
+Guidelines:
+1. ONLY answer questions about UNAK - politely redirect off-topic questions
+2. ALWAYS check the documentation before answering
+3. Be precise with names, titles, and departments
+4. If information is not found in the documentation, clearly state this
+5. If search results are not relevant to the specific query, acknowledge this and ask for clarification
+6. Maintain a professional and helpful tone
+7. Do not make assumptions or provide information not supported by the documentation
 
-Don't ask the user before taking an action, just do it. Always make sure you look at the documentation with the provided tools before answering the user's question.
-
-When searching the documentation, prioritize the most relevant information to the user's query.
-Always be honest when you can't find specific information in the documentation.
-
-Remember to:
-- Be professional and courteous
-- Provide accurate information from the UNAK documentation
-- Cite specific departments, programs, or services when relevant
-- Clarify if information might be outdated
-- Stay focused on UNAK-related topics
+Remember: Your responses should be based SOLELY on the information available in UNAK's documentation. 
+If you can't find specific information, say so rather than making assumptions.
 """
 
 pydantic_ai_expert = Agent(
@@ -86,7 +90,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
             {
                 'query_embedding': query_embedding,
                 'match_count': 5,
-                'filter': {'source': 'pydantic_ai_docs'}
+                'filter': {'source': 'site_pages'}
             }
         ).execute()
         
@@ -113,16 +117,16 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
 @pydantic_ai_expert.tool
 async def list_documentation_pages(ctx: RunContext[PydanticAIDeps]) -> List[str]:
     """
-    Retrieve a list of all available Pydantic AI documentation pages.
+    Retrieve a list of all available site_pages about unak.
     
     Returns:
         List[str]: List of unique URLs for all documentation pages
     """
     try:
-        # Query Supabase for unique URLs where source is pydantic_ai_docs
+        # Query Supabase for unique URLs where source is site_pages
         result = ctx.deps.supabase.from_('site_pages') \
             .select('url') \
-            .eq('metadata->>source', 'pydantic_ai_docs') \
+            .eq('metadata->>source', 'site_pages') \
             .execute()
         
         if not result.data:
@@ -153,7 +157,7 @@ async def get_page_content(ctx: RunContext[PydanticAIDeps], url: str) -> str:
         result = ctx.deps.supabase.from_('site_pages') \
             .select('title, content, chunk_number') \
             .eq('url', url) \
-            .eq('metadata->>source', 'pydantic_ai_docs') \
+            .eq('metadata->>source', 'site_pages') \
             .order('chunk_number') \
             .execute()
         
